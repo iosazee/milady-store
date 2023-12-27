@@ -1,0 +1,1 @@
+web: gunicorn milady.wsgi:application -c ./gunicorn.conf.py
