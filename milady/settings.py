@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get('secret_key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '54.234.147.177', 'localhost', '127.0.0.1',]
 
 
 # Application definition
@@ -159,7 +159,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
-# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 # Default primary key field type
@@ -222,8 +222,8 @@ STRIPE_PUBLIC_KEY = os.getenv('stripe_publishablekey')
 STRIPE_SECRET_KEY = os.getenv('stripe_secretkey')
 STRIPE_WEBHOOK_SECRET = os.getenv('stripe_webhooksecret')
 
-CSRF_TRUSTED_ORIGINS = [ "http://localhost:5173"]
-CORS_ORIGIN_WHITELIST = ['http://locahost:5173']
+CSRF_TRUSTED_ORIGINS = [ "https://eeki.shop", "https://*.eeki.shop", "https://milady-store.shop", "https://*.milady-store.shop",]
+CORS_ORIGIN_WHITELIST = ['https://eeki.shop', "https://milady-store.shop",]
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
@@ -238,3 +238,21 @@ EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = os.getenv('email_host_user')
 EMAIL_SUBJECT_PREFIX = '[Milady Online Store]'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/home/ubuntu/milady-store/error.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}

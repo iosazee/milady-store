@@ -38,7 +38,7 @@ from django.template import Context, Template
 from django.core.mail import EmailMessage
 from urllib.parse import quote
 
-FRONTEND_DOMAIN = 'http://localhost:5173'
+FRONTEND_DOMAIN = 'https://eeki.shop'
 
 class IndexView(View):
     def get(self, request, *args, **kwargs):

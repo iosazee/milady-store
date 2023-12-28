@@ -32,9 +32,9 @@ html_content_template = Template("""
 
 @receiver(user_registered)
 def send_welcome_email(sender, request, user, **kwargs):
-    frontend_domain = 'localhost:5173'
+    frontend_domain = 'eeki.shop'
     confirmation_path = f'/email/confirm/{user.id}/{user.confirmation_token}/'
-    confirmation_url = urlunparse(('http', frontend_domain, confirmation_path, '', '', ''))
+    confirmation_url = urlunparse(('https', frontend_domain, confirmation_path, '', '', ''))
 
     subject = f"Welcome to ShopIT, {user.last_name}"
 
