@@ -39,6 +39,7 @@ from django.core.mail import EmailMessage
 from urllib.parse import quote
 
 FRONTEND_DOMAIN = 'https://eeki.shop'
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class IndexView(View):
     def get(self, request, *args, **kwargs):
