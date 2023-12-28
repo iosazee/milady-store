@@ -31,7 +31,6 @@ urlpatterns = [
     path('orders/', views.OrderView.as_view(), name='order-create'),
     path('orders/<int:pk>/', views.OrderDetailView.as_view(), name='order-detail'),
     path('payment/order/<int:pk>/', csrf_exempt(views.PaymentWithStripeView.as_view()), name='checkout-session'),
-    path('stripe-webhook/', views.stripe_webhook_view, name='stripe-webhook'),
     path('groups/manager/', views.GroupViewset.as_view({
         'get': 'list', 'post': 'create', 'delete': 'destroy',
     }), name='group-manager'),

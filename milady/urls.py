@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from api.views import login_view, logout_view, IndexView
+from api.views import login_view, logout_view, IndexView, stripe_webhook_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,5 +25,6 @@ urlpatterns = [
     path('auth/logout/', logout_view, name='logout'),
     path('auth/', include('djoser.urls.jwt')),
     path('', IndexView.as_view(), name='index'),
+    path('webhook/', stripe_webhook_view, name='webhook'),
     path('api/', include('api.urls')),
 ]
