@@ -147,59 +147,85 @@ def login_view(request):
 
 
 
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def logout_view(request):
+#     try:
+#         # Retrieve the access token from the Django session
+#         access_token = request.session.get('access_token')
+
+#         # Retrieve the user ID for constructing the cache key
+#         user_id = str(request.user.id)
+
+#         # Retrieve the refresh token from the cache
+#         cache_key = f'refresh_token_{user_id}'
+#         refresh_token = cache.get(cache_key)
+
+#         # Log out the user
+#         logout(request)
+
+#         # Clear the user's session data
+#         session_key = request.session.session_key
+#         if session_key:
+#             Session.objects.filter(session_key=session_key).delete()
+
+#         # Rotate CSRF token
+#         rotate_token(request)
+
+#         if access_token and refresh_token:
+#             try:
+#                 # Ensure refresh_token is a string
+#                 refresh_token_str = str(refresh_token)
+
+#                 # Get the OutstandingToken instance associated with the refresh token
+#                 outstanding_tokens = OutstandingToken.objects.filter(
+#                     user=request.user,
+#                     token=refresh_token_str
+#                 )
+
+#                 # Ensure there is at least one OutstandingToken
+#                 if outstanding_tokens.exists():
+#                     # Blacklist each OutstandingToken
+#                     for outstanding_token in outstanding_tokens:
+#                         BlacklistedToken.objects.create(token=outstanding_token)
+
+#                 # Remove the tokens from the Django session
+#                 request.session['access_token'] = None
+
+#                 return JsonResponse({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+#             except Exception as e:
+#                 return JsonResponse({'detail': f'Error processing refresh token: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#         return JsonResponse({'detail': 'Logout successful (no tokens found)'}, status=status.HTTP_200_OK)
+
+#     except Exception as e:
+#         return JsonResponse({'detail': f'Error during logout: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def logout_view(request):
     try:
-        # Retrieve the access token from the Django session
-        access_token = request.session.get('access_token')
+        # Check if the user is logged in
+        if request.user.is_authenticated:
+            # Log out the user
+            logout(request)
 
-        # Retrieve the user ID for constructing the cache key
-        user_id = str(request.user.id)
+            # Clear the user's session data
+            session_key = request.session.session_key
+            if session_key:
+                Session.objects.filter(session_key=session_key).delete()
 
-        # Retrieve the refresh token from the cache
-        cache_key = f'refresh_token_{user_id}'
-        refresh_token = cache.get(cache_key)
+            # Rotate CSRF token
+            rotate_token(request)
 
-        # Log out the user
-        logout(request)
-
-        # Clear the user's session data
-        session_key = request.session.session_key
-        if session_key:
-            Session.objects.filter(session_key=session_key).delete()
-
-        # Rotate CSRF token
-        rotate_token(request)
-
-        if access_token and refresh_token:
-            try:
-                # Ensure refresh_token is a string
-                refresh_token_str = str(refresh_token)
-
-                # Get the OutstandingToken instance associated with the refresh token
-                outstanding_tokens = OutstandingToken.objects.filter(
-                    user=request.user,
-                    token=refresh_token_str
-                )
-
-                # Ensure there is at least one OutstandingToken
-                if outstanding_tokens.exists():
-                    # Blacklist each OutstandingToken
-                    for outstanding_token in outstanding_tokens:
-                        BlacklistedToken.objects.create(token=outstanding_token)
-
-                # Remove the tokens from the Django session
-                request.session['access_token'] = None
-
-                return JsonResponse({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
-            except Exception as e:
-                return JsonResponse({'detail': f'Error processing refresh token: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return JsonResponse({'detail': 'Logout successful (no tokens found)'}, status=status.HTTP_200_OK)
+            return JsonResponse({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+        else:
+            return JsonResponse({'detail': 'User is not logged in'}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         return JsonResponse({'detail': f'Error during logout: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -499,9 +525,102 @@ class PaymentWithStripeView(APIView):
 
 
 
+# @csrf_exempt
+# def stripe_webhook_view(request):
+#     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+#     payload = request.body
+#     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+#     event = None
+
+#     try:
+#         event = stripe.Webhook.construct_event(
+#             payload, sig_header, endpoint_secret
+#         )
+#     except ValueError as e:
+#         # Invalid payload
+#         return HttpResponse(status=400)
+#     except stripe.error.SignatureVerificationError as e:
+#         # Invalid signature
+#         return HttpResponse(status=400)
+
+#     # Handle the event
+#     if event['type'] == 'checkout.session.completed':
+#         session = stripe.checkout.Session.retrieve(
+#             event['data']['object']['id'],
+#             expand=['customer', 'payment_intent.latest_charge']
+#         )
+
+#         # Check if payment is successful
+#         if session and session.payment_status == 'paid':
+#             # Retrieve the order ID from the session metadata
+#             order_id = session.metadata.get('order_id')
+#             # Retrieve the order object
+#             order = Order.objects.get(id=order_id)
+#             # Update the order status to 'paid'
+#             order.status = 'paid'
+#             order.save()
+
+#             # Convert amount_total to pounds (or the relevant currency)
+#             amount_total_in_pounds = Decimal(session.amount_total) / 100
+#             receipt_url = session.payment_intent.latest_charge.get('receipt_url')
+#             # Update the Payment model with the payment details
+#             payment_date = make_aware(datetime.utcfromtimestamp(session.created))
+#             payment = Payment(
+#                 user=order.user,
+#                 order=order,
+#                 paymentintent_id=session.payment_intent.id,
+#                 session_id=session.id,
+#                 amount_paid=amount_total_in_pounds,
+#                 payment_date=payment_date,
+#                 receipt_url=receipt_url,
+#             )
+#             payment.save()
+#             # Send an email to the user with the payment details
+#             print(f'receipt url: {receipt_url}')
+#             html_content_template = Template("""
+#                 <html>
+#                     <head>
+#                         <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'>
+#                     </head>
+#                     <body class='container' style='font-family: Arial, sans-serif; color: #333;'>
+#                     <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703311634/logo_fixtgx.png' alt='Shopit logo' class='img-fluid'>
+#                         <p class='lead mb-4'>Thank you for your order {{ order.user.last_name }}. Your order with ID {{ order.id }} has been successfully paid.</p>
+#                         <p class='lead mb-4'>
+#                             We will process your order shortly, and you can view and download your receipt by   <a href='{{ receipt_url }}' class='text-primary font-weight-bold'>clicking here</a>
+#                         </p>
+#                         <div>
+#                         <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703323936/favicon_jig0fp.ico' alt='Logo' class='img-fluid' width='50'>
+#                         <p><small>ShopIT, your one-stop total shopping experience!</small></p>
+#                         </div>
+#                     </body>
+#                 </html>
+#                 """)
+
+#             subject = f"Payment Confirmation - Order #{order.id}"
+
+#             context = Context({'order': order,  'receipt_url': receipt_url})
+#             html_content = html_content_template.render(context)
+
+#             message = EmailMessage(
+#                 subject=subject,
+#                 body=html_content,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 to=[order.user.email],
+#             )
+#             message.content_subtype = 'html'
+#             message.send()
+#     # Passed signature verification
+#     return HttpResponse(status=200)
+
+
+
+
 @csrf_exempt
 def stripe_webhook_view(request):
+    # Your Stripe webhook secret
     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    # Verify the Stripe event
     payload = request.body
     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
     event = None
@@ -517,19 +636,20 @@ def stripe_webhook_view(request):
         # Invalid signature
         return HttpResponse(status=400)
 
-    # Handle the event
+    # Check if the event type is 'checkout.session.completed'
     if event['type'] == 'checkout.session.completed':
-        session = stripe.checkout.Session.retrieve(
-            event['data']['object']['id'],
-            expand=['customer', 'payment_intent.latest_charge']
-        )
+        # Acknowledge the webhook request immediately with a simple 200 OK
+        # This prevents a timeout while processing the event
+        order_id = event['data']['object']['metadata'].get('order_id')
+        session_id = event['data']['object']['id']
 
-        # Check if payment is successful
-        if session and session.payment_status == 'paid':
-            # Retrieve the order ID from the session metadata
-            order_id = session.metadata.get('order_id')
+        if order_id:
             # Retrieve the order object
             order = Order.objects.get(id=order_id)
+
+            # Retrieve the session object
+            session = stripe.checkout.Session.retrieve(session_id, expand=['customer', 'payment_intent.latest_charge'])
+
             # Update the order status to 'paid'
             order.status = 'paid'
             order.save()
@@ -537,6 +657,7 @@ def stripe_webhook_view(request):
             # Convert amount_total to pounds (or the relevant currency)
             amount_total_in_pounds = Decimal(session.amount_total) / 100
             receipt_url = session.payment_intent.latest_charge.get('receipt_url')
+
             # Update the Payment model with the payment details
             payment_date = make_aware(datetime.utcfromtimestamp(session.created))
             payment = Payment(
@@ -549,8 +670,8 @@ def stripe_webhook_view(request):
                 receipt_url=receipt_url,
             )
             payment.save()
+
             # Send an email to the user with the payment details
-            print(f'receipt url: {receipt_url}')
             html_content_template = Template("""
                 <html>
                     <head>
@@ -571,8 +692,7 @@ def stripe_webhook_view(request):
                 """)
 
             subject = f"Payment Confirmation - Order #{order.id}"
-
-            context = Context({'order': order,  'receipt_url': receipt_url})
+            context = Context({'order': order, 'receipt_url': receipt_url})
             html_content = html_content_template.render(context)
 
             message = EmailMessage(
@@ -583,7 +703,8 @@ def stripe_webhook_view(request):
             )
             message.content_subtype = 'html'
             message.send()
-    # Passed signature verification
+
+    # For other event types, still acknowledge with a 200 OK
     return HttpResponse(status=200)
 
 
