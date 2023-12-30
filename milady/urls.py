@@ -19,7 +19,7 @@ from django.urls import path, include
 from api.views import login_view, logout_view, IndexView, stripe_webhook_view
 
 from django.conf import settings
-from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponseRedirect
 
 
 
@@ -35,8 +35,8 @@ urlpatterns = [
 ]
 
 
-# HTTPS Redirection Middleware
+
 if settings.DEBUG is False:
     urlpatterns += [
-        path(r'^.*', lambda request: HttpResponseRedirect(request.build_absolute_uri().replace('http://', 'https://')))
+        path(r'^.*', lambda request: HttpResponseRedirect(request.build_absolute_uri().replace('http://', 'https://')) if not request.is_secure() else None)
     ]
