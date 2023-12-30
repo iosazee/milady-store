@@ -22,14 +22,8 @@ from django.conf import settings
 from django.http import HttpResponseRedirect
 
 
-def https_redirect(request):
-    if not request.is_secure():
-        url = request.build_absolute_uri().replace('http://', 'https://')
-        return HttpResponseRedirect(url)
-
 
 urlpatterns = [
-    path('', https_redirect),
     path('admin/', admin.site.urls),
     path('auth/', include('djoser.urls')),
     path('auth/login/', login_view, name='login'),
@@ -41,7 +35,8 @@ urlpatterns = [
 ]
 
 
+# HTTPS Redirection Middleware
 if settings.DEBUG is False:
-   urlpatterns += [
-        path(r'^.*', https_redirect)
-   ]
+    urlpatterns += [
+        path(r'^.*', lambda request: HttpResponseRedirect(request.build_absolute_uri().replace('http://', 'https://')))
+    ]

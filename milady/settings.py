@@ -224,7 +224,6 @@ STRIPE_WEBHOOK_SECRET = os.getenv('stripe_webhooksecret')
 
 CSRF_TRUSTED_ORIGINS = [ "https://eeki.shop", "https://*.eeki.shop", "https://milady-store.shop", "https://*.milady-store.shop",]
 CORS_ORIGIN_WHITELIST = ['https://eeki.shop', "https://milady-store.shop",]
-CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
 # Email Config
