@@ -30,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('secret_key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '54.234.147.177', 'localhost', '127.0.0.1',]
 
@@ -256,3 +256,7 @@ LOGGING = {
         },
     },
 }
+
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True

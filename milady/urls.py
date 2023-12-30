@@ -18,7 +18,18 @@ from django.contrib import admin
 from django.urls import path, include
 from api.views import login_view, logout_view, IndexView, stripe_webhook_view
 
+from django.conf import settings
+from django.http import HttpResponseRedirect
+
+
+def https_redirect(request):
+    if not request.is_secure():
+        url = request.build_absolute_uri().replace('http://', 'https://')
+        return HttpResponseRedirect(url)
+
+
 urlpatterns = [
+    path('', https_redirect),
     path('admin/', admin.site.urls),
     path('auth/', include('djoser.urls')),
     path('auth/login/', login_view, name='login'),
@@ -28,3 +39,9 @@ urlpatterns = [
     path('webhook/', stripe_webhook_view, name='webhook'),
     path('api/', include('api.urls')),
 ]
+
+
+if settings.DEBUG is False:
+   urlpatterns += [
+        path(r'^.*', https_redirect)
+   ]
