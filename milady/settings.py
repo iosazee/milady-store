@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get('secret_key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '54.234.147.177', 'localhost', '127.0.0.1',]
+ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '54.225.11.200', 'localhost', '127.0.0.1',]
 
 
 # Application definition
@@ -55,9 +55,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
