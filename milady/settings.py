@@ -269,4 +269,3 @@ LOGGING = {
 # SECURE_SSL_REDIRECT = True
 
 MY_PROTOCOL = "https"
-BASE_URL = "https://milady-store.shop"

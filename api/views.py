@@ -244,7 +244,7 @@ class ProductViewset(viewsets.ModelViewSet):
         return new_response
 
 def replace_url(url):
-    return url.replace("http://", settings.BASE_URL)
+     return url.replace("http://", "https://")
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
