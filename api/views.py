@@ -22,7 +22,6 @@ from django.middleware.csrf import rotate_token
 from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
-from rest_framework_simplejwt.tokens import  OutstandingToken, BlacklistedToken
 from .models import Cart, Category, Order, OrderItem, Product, Review, CartItems, Payment
 from .serializers import OrderItemSerializer, OrderSerializer, CategorySerializer, ProductSerializer, ReviewSerializer, CartSerializer, CartItemSerializer, AddCartItemSerializer, UpdateCartItemSerializer, PaymentSerializer, ProductCreateSerializer
 from core.serializers import UserCreateSerializer
@@ -38,8 +37,9 @@ from datetime import datetime
 from django.utils.timezone import make_aware
 import stripe
 from decimal import Decimal
-from django.template import Context, Template
-from django.core.mail import EmailMessage
+from django.views.decorators.http import require_POST
+import threading
+from milady.EmailSender import send_payment_confirmation_email
 
 
 FRONTEND_DOMAIN = 'https://eeki.shop'
@@ -496,102 +496,153 @@ class PaymentWithStripeView(APIView):
 
 
 
+# @csrf_exempt
+# def stripe_webhook_view(request):
+#     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+#     payload = request.body
+#     sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+#     event = None
+
+#     try:
+#         event = stripe.Webhook.construct_event(
+#             payload, sig_header, endpoint_secret
+#         )
+#     except ValueError as e:
+#         # Invalid payload
+#         return HttpResponse(status=400)
+#     except stripe.error.SignatureVerificationError as e:
+#         # Invalid signature
+#         return HttpResponse(status=400)
+
+#     # Handle the event
+#     if event['type'] == 'checkout.session.completed':
+
+#         response = StreamingHttpResponse(status=200)
+#         response.streaming_content = ["ok"]
+
+#         session = stripe.checkout.Session.retrieve(
+#             event['data']['object']['id'],
+#             expand=['customer', 'payment_intent.latest_charge']
+#         )
+
+#         # Check if payment is successful
+#         if session and session.payment_status == 'paid':
+#             # Retrieve the order ID from the session metadata
+#             order_id = session.metadata.get('order_id')
+#             # Retrieve the order object
+#             order = Order.objects.get(id=order_id)
+#             # Update the order status to 'paid'
+#             order.status = 'paid'
+#             order.save()
+
+#             # Convert amount_total to pounds (or the relevant currency)
+#             amount_total_in_pounds = Decimal(session.amount_total) / 100
+#             receipt_url = session.payment_intent.latest_charge.get('receipt_url')
+#             # Update the Payment model with the payment details
+#             payment_date = make_aware(datetime.utcfromtimestamp(session.created))
+#             payment = Payment(
+#                 user=order.user,
+#                 order=order,
+#                 paymentintent_id=session.payment_intent.id,
+#                 session_id=session.id,
+#                 amount_paid=amount_total_in_pounds,
+#                 payment_date=payment_date,
+#                 receipt_url=receipt_url,
+#             )
+#             payment.save()
+#             # Send an email to the user with the payment details
+#             print(f'receipt url: {receipt_url}')
+#             html_content_template = Template("""
+#                 <html>
+#                     <head>
+#                         <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'>
+#                     </head>
+#                     <body class='container' style='font-family: Arial, sans-serif; color: #333;'>
+#                     <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703311634/logo_fixtgx.png' alt='Shopit logo' class='img-fluid'>
+#                         <p class='lead mb-4'>Thank you for your order {{ order.user.last_name }}. Your order with ID {{ order.id }} has been successfully paid.</p>
+#                         <p class='lead mb-4'>
+#                             We will process your order shortly, and you can view and download your receipt by   <a href='{{ receipt_url }}' class='text-primary font-weight-bold'>clicking here</a>
+#                         </p>
+#                         <div>
+#                         <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703323936/favicon_jig0fp.ico' alt='Logo' class='img-fluid' width='50'>
+#                         <p><small>ShopIT, your one-stop total shopping experience!</small></p>
+#                         </div>
+#                     </body>
+#                 </html>
+#                 """)
+
+#             subject = f"Payment Confirmation - Order #{order.id}"
+
+#             context = Context({'order': order,  'receipt_url': receipt_url})
+#             html_content = html_content_template.render(context)
+
+#             message = EmailMessage(
+#                 subject=subject,
+#                 body=html_content,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 to=[order.user.email],
+#             )
+#             message.content_subtype = 'html'
+#             message.send()
+#     # Passed signature verification
+#     return HttpResponse(status=200)
+
+
+
+@require_POST
 @csrf_exempt
 def stripe_webhook_view(request):
     endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
     payload = request.body
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
-    event = None
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', None)
 
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
     except ValueError as e:
-        # Invalid payload
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
         return HttpResponse(status=400)
 
-    # Handle the event
-    if event['type'] == 'checkout.session.completed':
+    # Acknowledge receipt immediately
+    HttpResponse("ok", status=200)
 
-        # threading.Thread(target=send_success, args=[request]).start()
-        response = StreamingHttpResponse(status=200)
-        response.streaming_content = ["ok"]
+    # Start a new thread to process the event asynchronously
+    event_data = event['data']['object']
+    threading.Thread(target=process_checkout, args=(event_data,)).start()
 
-        session = stripe.checkout.Session.retrieve(
-            event['data']['object']['id'],
-            expand=['customer', 'payment_intent.latest_charge']
+    return HttpResponse("ok", status=200)
+
+
+def process_checkout(event_data):
+    session = stripe.checkout.Session.retrieve(
+        event_data['id'],
+        expand=['customer', 'payment_intent.latest_charge']
+    )
+
+    if session and session.payment_status == 'paid':
+        order_id = session.metadata.get('order_id')
+        order = Order.objects.get(id=order_id)
+        order.status = 'paid'
+        order.save()
+
+        amount_total_in_pounds = Decimal(session.amount_total) / 100
+        receipt_url = session.payment_intent.latest_charge.get('receipt_url')
+
+        payment_date = make_aware(datetime.utcfromtimestamp(session.created))
+        payment = Payment(
+            user=order.user,
+            order=order,
+            paymentintent_id=session.payment_intent.id,
+            session_id=session.id,
+            amount_paid=amount_total_in_pounds,
+            payment_date=payment_date,
+            receipt_url=receipt_url,
         )
+        payment.save()
 
-        # Check if payment is successful
-        if session and session.payment_status == 'paid':
-            # Retrieve the order ID from the session metadata
-            order_id = session.metadata.get('order_id')
-            # Retrieve the order object
-            order = Order.objects.get(id=order_id)
-            # Update the order status to 'paid'
-            order.status = 'paid'
-            order.save()
-
-            # Convert amount_total to pounds (or the relevant currency)
-            amount_total_in_pounds = Decimal(session.amount_total) / 100
-            receipt_url = session.payment_intent.latest_charge.get('receipt_url')
-            # Update the Payment model with the payment details
-            payment_date = make_aware(datetime.utcfromtimestamp(session.created))
-            payment = Payment(
-                user=order.user,
-                order=order,
-                paymentintent_id=session.payment_intent.id,
-                session_id=session.id,
-                amount_paid=amount_total_in_pounds,
-                payment_date=payment_date,
-                receipt_url=receipt_url,
-            )
-            payment.save()
-            # Send an email to the user with the payment details
-            print(f'receipt url: {receipt_url}')
-            html_content_template = Template("""
-                <html>
-                    <head>
-                        <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'>
-                    </head>
-                    <body class='container' style='font-family: Arial, sans-serif; color: #333;'>
-                    <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703311634/logo_fixtgx.png' alt='Shopit logo' class='img-fluid'>
-                        <p class='lead mb-4'>Thank you for your order {{ order.user.last_name }}. Your order with ID {{ order.id }} has been successfully paid.</p>
-                        <p class='lead mb-4'>
-                            We will process your order shortly, and you can view and download your receipt by   <a href='{{ receipt_url }}' class='text-primary font-weight-bold'>clicking here</a>
-                        </p>
-                        <div>
-                        <img src='https://res.cloudinary.com/dj7gm1w72/image/upload/v1703323936/favicon_jig0fp.ico' alt='Logo' class='img-fluid' width='50'>
-                        <p><small>ShopIT, your one-stop total shopping experience!</small></p>
-                        </div>
-                    </body>
-                </html>
-                """)
-
-            subject = f"Payment Confirmation - Order #{order.id}"
-
-            context = Context({'order': order,  'receipt_url': receipt_url})
-            html_content = html_content_template.render(context)
-
-            message = EmailMessage(
-                subject=subject,
-                body=html_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[order.user.email],
-            )
-            message.content_subtype = 'html'
-            message.send()
-    # Passed signature verification
-    return HttpResponse(status=200)
-
-
-
-# def send_success(request):
-#     return HttpResponse(status=200)
+        send_payment_confirmation_email(order, receipt_url)
 
 
 
