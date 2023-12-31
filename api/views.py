@@ -218,14 +218,11 @@ class ProductViewset(viewsets.ModelViewSet):
         response = super().list(request, *args, **kwargs)
 
         if settings.MY_PROTOCOL == "https":
-            if response.data["next"]:
-                response.data["next"] = response.data["next"].replace(
-                "http://", "https://"
-            )
-            if response.data["previous"]:
-                response.data["previous"] = response.data["previous"].replace(
-                "http://", "https://"
-            )
+            if response.data["next"] and response.data["next"].startswith("http://"):
+                response.data["next"] = response.data["next"].replace("http://", "https://")
+
+            if response.data["previous"] and response.data["previous"].startswith("http://"):
+                response.data["previous"] = response.data["previous"].replace("http://", "https://")
 
         # Create a new Response object with the data
         new_response = Response(response.data)
