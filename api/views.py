@@ -219,9 +219,13 @@ class ProductViewset(viewsets.ModelViewSet):
 
         if settings.MY_PROTOCOL == "https":
             if response.data["next"]:
-                response.data["next"] = replace_url(response.data["next"])
+                response.data["next"] = response.data["next"].replace(
+                "http://", "https://"
+            )
             if response.data["previous"]:
-                response.data["previous"] = replace_url(response.data["previous"])
+                response.data["previous"] = response.data["previous"].replace(
+                "http://", "https://"
+            )
 
         # Create a new Response object with the data
         new_response = Response(response.data)
@@ -243,8 +247,8 @@ class ProductViewset(viewsets.ModelViewSet):
 
         return new_response
 
-def replace_url(url):
-     return url.replace("http://", "https://")
+# def replace_url(url):
+#      return url.replace("http://", "https://")
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
