@@ -184,7 +184,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductPagination(PageNumberPagination):
-    page_size = 10  # Adjust the page size as needed
+    page_size = 10
 
 class ProductViewset(viewsets.ModelViewSet):
     queryset = Product.objects.order_by('id')
@@ -217,6 +217,12 @@ class ProductViewset(viewsets.ModelViewSet):
         # Get the fully processed response from the super().list method
         response = super().list(request, *args, **kwargs)
 
+        if settings.MY_PROTOCOL == "https":
+            if response.data["next"]:
+                response.data["next"] = replace_url(response.data["next"])
+            if response.data["previous"]:
+                response.data["previous"] = replace_url(response.data["previous"])
+
         # Create a new Response object with the data
         new_response = Response(response.data)
 
@@ -237,7 +243,8 @@ class ProductViewset(viewsets.ModelViewSet):
 
         return new_response
 
-
+def replace_url(url):
+    return url.replace("http://", settings.BASE_URL)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
