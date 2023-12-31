@@ -184,7 +184,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ProductPagination(PageNumberPagination):
-    page_size = 10
+    page_size = 8
+
 
 class ProductViewset(viewsets.ModelViewSet):
     queryset = Product.objects.order_by('id')
@@ -207,45 +208,19 @@ class ProductViewset(viewsets.ModelViewSet):
 
     @method_decorator(cache_page(60 * 30))  # Cache the response for 30 minutes
     def list(self, request, *args, **kwargs):
-        # Attempt to retrieve cached data
-        cached_data = cache.get('product_list')
+        return super().list(request, *args, **kwargs)
 
-        if cached_data is not None:
-            # Return cached data
-            return Response(cached_data)
-
-        # Get the fully processed response from the super().list method
-        response = super().list(request, *args, **kwargs)
-
+    def finalize_response(self, request, response, *args, **kwargs):
+        # Optionally, modify response data before finalizing the response
         if settings.MY_PROTOCOL == "https":
-            if response.data["next"] and response.data["next"].startswith("http://"):
+            if response.data.get("next"):
                 response.data["next"] = response.data["next"].replace("http://", "https://")
 
-            if response.data["previous"] and response.data["previous"].startswith("http://"):
+            if response.data.get("previous"):
                 response.data["previous"] = response.data["previous"].replace("http://", "https://")
 
-        # Create a new Response object with the data
-        new_response = Response(response.data)
+        return super().finalize_response(request, response, *args, **kwargs)
 
-        # Set accepted_renderer to JSONRenderer instance
-        new_response.accepted_renderer = JSONRenderer()
-
-        # Set accepted_media_type to JSONRenderer media type
-        new_response.accepted_media_type = JSONRenderer.media_type
-
-        # Set renderer_context to a dictionary
-        new_response.renderer_context = {'view': self}
-
-        # Manually render the response content
-        new_response.render()
-
-        # Store the fully rendered response content in the cache for 30 minutes
-        cache.set('product_list', new_response.data, 60 * 30)
-
-        return new_response
-
-# def replace_url(url):
-#      return url.replace("http://", "https://")
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

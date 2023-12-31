@@ -182,7 +182,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 15,
+    'PAGE_SIZE': 8,
 }
 
 SIMPLE_JWT = {
@@ -204,6 +204,8 @@ DJOSER = {
     },
 }
 
+CACHE_MIDDLEWARE_ALIAS = 'default'
+CACHE_MIDDLEWARE_SECONDS = 60 * 30  # 30 minutes
 
 CACHES = {
     'default': {
