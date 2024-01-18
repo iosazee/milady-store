@@ -137,7 +137,7 @@ def login_view(request):
                 user_id = str(user.id)
                 cache_key = f'refresh_token_{user_id}'
                 cache.set(cache_key, refresh_token, timeout=604800)
-                cache.touch(cache_key, timeout=604800)
+                # cache.touch(cache_key, timeout=604800)
 
         response_data = {'detail': 'Login successful', 'response_data': request.data,
             'user_id': user_id}
