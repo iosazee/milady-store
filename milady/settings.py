@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get('secret_key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("debug", default="False").lower() == "true"
 
-ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '54.225.11.200', 'localhost', '127.0.0.1',]
+ALLOWED_HOSTS = ['milady-store.shop', 'www.milady-store.shop', 'eeki.shop', 'www.eeki.shop', '35.172.211.117', 'localhost', '127.0.0.1',]
 
 
 # Application definition
@@ -248,8 +248,8 @@ STRIPE_PUBLIC_KEY = os.getenv('stripe_publishablekey')
 STRIPE_SECRET_KEY = os.getenv('stripe_secretkey')
 STRIPE_WEBHOOK_SECRET = os.getenv('stripe_webhooksecret')
 
-CSRF_TRUSTED_ORIGINS = [ "https://eeki.shop", "https://*.eeki.shop", "https://milady-store.shop", "https://*.milady-store.shop",]
-CORS_ORIGIN_WHITELIST = ['https://eeki.shop', "https://milady-store.shop",]
+CSRF_TRUSTED_ORIGINS = [ "https://www.eeki.shop",  "https://eeki.shop", "https://*.eeki.shop", "https://milady-store.shop", "https://*.milady-store.shop",]
+CORS_ORIGIN_WHITELIST = ['https://www.eeki.shop',  "https://eeki.shop", "https://milady-store.shop",]
 CORS_ALLOW_CREDENTIALS = True
 
 # Email Config
