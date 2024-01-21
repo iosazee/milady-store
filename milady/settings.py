@@ -94,42 +94,28 @@ WSGI_APPLICATION = 'milady.wsgi.application'
 
 # Database config for local machine
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('db_name'),
-        'USER': os.getenv('db_user'),
-        'PASSWORD': os.getenv('db_password'),
-        'HOST': os.getenv('db_host'),
-        'PORT': os.getenv('db_port'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+if os.getenv('DEVELOPMENT_ENVIRONMENT') == 'local':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
-# if os.getenv('DEVELOPMENT_ENVIRONMENT') == 'local':
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.sqlite3',
-#             'NAME': BASE_DIR / 'db.sqlite3',
-#         }
-#     }
-# else:
-#     # Hosted Application - MySQL
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.mysql',
-#             'NAME': os.getenv('db_name'),
-#             'USER': os.getenv('db_user'),
-#             'PASSWORD': os.getenv('db_password'),
-#             'HOST': os.getenv('db_host'),
-#             'PORT': os.getenv('db_port'),
-#             'OPTIONS': {
-#                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-#             },
-#         }
-#     }
+else:
+    # Hosted Application - MySQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('db_name'),
+            'USER': os.getenv('db_user'),
+            'PASSWORD': os.getenv('db_password'),
+            'HOST': os.getenv('db_host'),
+            'PORT': os.getenv('db_port'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 
 
